@@ -8,10 +8,11 @@ class SourceSearch:
 
     def __init__(self, icecube_filename):
         
-        data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_filename)
+        data_ra, data_dec, data_sigmas, data_file_year = self.load_icecube_data(icecube_filename)
     
         self.N = len(data_sigmas)
         self.cord_i = np.stack((data_ra, data_dec), axis=1)
+        self.data_file_year = data_file_year
         self.data_sigmas = data_sigmas
 
         # Compute these sin/coss once to save computation time later
@@ -33,7 +34,7 @@ class SourceSearch:
         if(close_point_cut is None):
             close_points = np.ones(self.N).astype('bool')
         else:
-            close_points = np.sum(np.abs(cord_s - self.cord_i), axis=1) < close_point_cut
+            close_points = np.sum(np.square(cord_s - self.cord_i), axis=1) < np.square(close_point_cut)
         
         cosA = (self.sindec[close_points] * np.sin(np.deg2rad(cord_s[1]))
                 + self.cosdec[close_points] * np.cos(np.deg2rad(cord_s[1])) * np.cos(np.deg2rad(self.cord_i[close_points, 0] - cord_s[0])))
@@ -96,19 +97,21 @@ class SourceSearch:
         data_sigmas = np.array(icecube_data["data_sigmas"])
         data_ra = np.array(icecube_data["data_ra"])
         data_dec = np.array(icecube_data["data_dec"])
+        data_file_year = np.array(icecube_data["data_file_year"])
 
         allowed_entries = data_sigmas != 0.0
         data_ra = data_ra[allowed_entries]
         data_dec = data_dec[allowed_entries]
         data_sigmas = data_sigmas[allowed_entries]
+        data_file_year = data_file_year[allowed_entries]
 
-        return data_ra, data_dec, data_sigmas
+        return data_ra, data_dec, data_sigmas, data_file_year
 
 
     def job_submission(self, cord_s, i_source, close_point_cut=10, significance_cut=1e-10):
 
         S_i = self.Si_likelihood(cord_s, close_point_cut=close_point_cut)
-        B_i = self.f_B_i(cord_s[1]) 
+        B_i = self.f_B_i(cord_s[1])
         
         non_zero_S_i = (S_i > significance_cut)
         S_i = S_i[non_zero_S_i]
@@ -140,7 +143,7 @@ class SourceSearch:
 
     def load_background(self, file_name):
         data_bg = np.load(file_name, allow_pickle=True)
-        
+
         self.f_B_i = scipy.interpolate.interp1d(data_bg['dec'],
                                                 data_bg['B_i'],
                                                 kind='cubic',

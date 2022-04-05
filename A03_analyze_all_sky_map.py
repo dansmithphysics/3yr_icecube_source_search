@@ -40,14 +40,14 @@ def main():
     use_parallel = True
     n_cpu = 4
 
-    step_size = 0.8  # Degrees step on the sky
+    step_size = 5.0  # Degrees step on the sky
 
     sourcesearch_ = IceCubeAnalysis.SourceSearch("./processed_data/output_icecube_data.npz")
     sourcesearch_.load_background("./processed_data/output_icecube_background_count.npz")
 
     #  This is the coordinate of each point on the sky we are checking.
     cat_ra, cat_dec, index_map, ra_len, dec_len = prepare_skymap_coordinates(step_size)
-    
+
     N_sky_pts = len(cat_ra)
 
     print("Number of IceCube events: \t %i" % sourcesearch_.N)

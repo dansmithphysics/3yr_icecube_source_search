@@ -28,9 +28,6 @@ def load_catalog(file_name, allowed_names):
     cat_names = cat_names[allowed]
     cat_flux1000 = cat_flux1000[allowed]
 
-    cat_ra = np.deg2rad(cat_ra)
-    cat_dec = np.deg2rad(cat_dec)
-
     return cat_ra, cat_dec, cat_names, cat_flux1000
 
 
@@ -109,9 +106,9 @@ def main():
     sourcesearch_.load_background("./processed_data/output_icecube_background_count.npz")
 
     # Parameters of the problem
-    alpha = 2.5
+    alpha = 2.0
     allowed_names = ['BLL', 'bll', 'FSRQ', 'fsrq', 'BCU', 'bcu']
-    weights_type = 'flux'
+    weights_type = 'flat'
     
     # The time used in integration, in seconds
     T = (3.0 * 365.25 * 24.0 * 3600.0)
@@ -166,7 +163,7 @@ def main():
         sweep_ts = np.sum(parallel_results[1], axis=0)
         sweep_flux = np.sum(parallel_results[0], axis=0)
 
-    else:        
+    else:  
         for i_source in range(len(cord_s)):
             sweep_fluxes_, ts_results_ = source_loop(parameterized_span,
                                                      sourcesearch_,
