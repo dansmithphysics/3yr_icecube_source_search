@@ -67,7 +67,7 @@ class SourceSearch:
             return np.sum(np.log(result_)) + N_zeros * np.log((1.0 - n_s / self.N) * B_i)
 
 
-    def test_statistic_at_point(self, cord_s, n_s, S_i=None, B_i=None):
+    def test_statistic_at_point(self, cord_s, n_s, S_i=None, B_i=None, N_zeros=0):
         """
         Calculates the test statistic at point
         
@@ -84,8 +84,8 @@ class SourceSearch:
         if(B_i is None):
             B_i = self.f_B_i(cord_s[1])
 
-        del_ln_L_n_s = self.calculate_likelihood(n_s, S_i, B_i)
-        del_ln_L_0 = self.calculate_likelihood(0.0, S_i, B_i)
+        del_ln_L_n_s = self.calculate_likelihood(n_s, S_i, B_i, N_zeros)
+        del_ln_L_0 = self.calculate_likelihood(0.0, S_i, B_i, N_zeros)
 
         return 2.0 * (del_ln_L_n_s - del_ln_L_0)
 
