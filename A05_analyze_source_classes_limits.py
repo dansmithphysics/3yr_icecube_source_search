@@ -20,8 +20,8 @@ class SourceClassSearch:
 
     def load_4lac(self, catalog_filename, source_names, weights_type):
         self.load_catalog(catalog_filename, source_names)
-        self.load_weights(weights_type)
         self.N = len(self.cat_ra)
+        self.load_weights(weights_type)
 
 
     def load_Aeff(self, file_name):
@@ -43,7 +43,8 @@ class SourceClassSearch:
         cat_type = catelog_data["cat_type"]
         cat_flux1000 = catelog_data["cat_flux1000"]
         cat_z = catelog_data["cat_z"]
-        
+        cat_var_index = catelog_data["cat_var_index"]
+
         allowed_names_mask = np.zeros(len(cat_dec))
         for i in range(len(allowed_names)):
             allowed_names_mask[cat_type == allowed_names[i]] = 1
@@ -56,11 +57,13 @@ class SourceClassSearch:
         cat_names = cat_names[allowed]
         cat_flux1000 = cat_flux1000[allowed]
         cat_z = cat_z[allowed]
+        cat_var_index = cat_var_index[allowed]
         
         self.cat_ra = cat_ra
         self.cat_dec = cat_dec
         self.cat_names = cat_names
         self.cat_flux1000 = cat_flux1000
+        self.cat_var_index = cat_var_index
         self.cat_z = cat_z  # Missing entries are -inf
         
         # Calculate the luminosity distance to source        
@@ -68,6 +71,17 @@ class SourceClassSearch:
         non_zero_entries = np.logical_not(np.isinf(self.cat_z))
         self.cat_DL[non_zero_entries] = np.array([self.luminosity_distance_from_redshift(z) for z in self.cat_z[non_zero_entries]])
 
+
+    def var_index_cut(self, var_index_cut):
+        allowed_values = self.cat_var_index < var_index_cut
+        self.cat_var_index = self.cat_var_index[allowed_values]
+        self.cat_ra = self.cat_ra[allowed_values]
+        self.cat_dec = self.cat_dec[allowed_values]
+        self.cat_names = self.cat_names[allowed_values]
+        self.cat_flux1000 = self.cat_flux1000[allowed_values]
+        self.cat_z = self.cat_z[allowed_values]
+        self.N = len(self.cat_ra)
+        
         
     def luminosity_distance_from_redshift(self, z):
         # Values taken from https://arxiv.org/pdf/1807.06209.pdf
@@ -82,7 +96,7 @@ class SourceClassSearch:
         
     def load_weights(self, weights_type):
         if(weights_type == 'flat'):
-            cat_flux_weights = np.ones(len(self.cat_flux1000))
+            cat_flux_weights = np.ones(self.N)
         elif(weights_type == 'flux'):
             cat_flux_weights = self.cat_flux1000
         elif(weights_type == 'dist'):
@@ -135,7 +149,7 @@ class SourceClassSearch:
         return sweep_fluxes, ts_results
 
 
-def main(source_class_names, alpha=2.0, weights_type='flat', use_parallel=False, n_cpu=4):
+def main(source_class_names, alpha=2.0, weights_type='flat', use_parallel=False, n_cpu=4, var_index_cut=None):
 
     sourcesearch_ = IceCubeAnalysis.SourceSearch("./processed_data/output_icecube_data.npz")
     sourcesearch_.load_background("./processed_data/output_icecube_background_count.npz")
@@ -151,6 +165,9 @@ def main(source_class_names, alpha=2.0, weights_type='flat', use_parallel=False,
     class_search = SourceClassSearch(T, E1, E2, alpha, sourcesearch_, Aeff_filename)
     
     class_search.load_4lac("./processed_data/4LAC_catelogy.npz", source_class_names, weights_type)
+    
+    if(var_index_cut is not None):
+        class_search.var_index_cut(var_index_cut)
     
     print("Number of Sources:\t %i" % class_search.N)
     print("Number of Events:\t %i" % sourcesearch_.N)
@@ -214,13 +231,13 @@ if(__name__ == "__main__"):
         
         for i_weights_type, weights_type in enumerate(weights_types):
             sweep_flux, sweep_ts, sweep_ts_each_source = main(source_class_names=source_class_names, alpha=alpha,                 
-                                                              weights_type=weights_type, use_parallel=True)
+                                                              weights_type=weights_type, use_parallel=True, var_index_cut=18.48)
 
             plt.semilogx(np.array(sweep_flux)[sweep_ts < 1e3],
                          sweep_ts[sweep_ts < 1e3],
                          linestyle=linestyles[i_alpha],
                          color=colors[i_weights_type])
-
+            
     for i_weights_type, weights_type in enumerate(weights_types):            
         plt.plot([], [], color=colors[i_weights_type], label=labels[i_weights_type])
 
