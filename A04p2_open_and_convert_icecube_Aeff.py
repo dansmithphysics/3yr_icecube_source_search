@@ -109,7 +109,6 @@ def load_Aeff(input_file_names, output_file_name, alpha=2.5):
 if(__name__ == "__main__"):
 
     input_file_names = glob.glob("./data/3year-data-release/*Aeff.txt")
-    alpha = 2.0
 
     for alpha in [2.0, 2.5]:
     
