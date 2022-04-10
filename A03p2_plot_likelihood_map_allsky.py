@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 import IceCubeAnalysis
 
 
-def main(fit_file_name, step_size=5.0):
+def main(fit_file_name, step_size=2.0):
     """
     Plots the results from the all-sky
     best-fit source search.
@@ -110,4 +110,4 @@ def main(fit_file_name, step_size=5.0):
 
 if __name__ == "__main__":
     fit_file_name = "./processed_data/calculated_fit_likelihood_map_allsky.npy"
-    main(fit_file_name, step_size=5.0)
+    main(fit_file_name, step_size=2.0)

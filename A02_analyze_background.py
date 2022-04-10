@@ -16,7 +16,7 @@ def main(icecube_file_name, output_file_name, n_dec_pts=1000):
         IceCube pickle file location.
     output_file_name : str
         Output file name for processed background PDF.
-
+n
     Returns
     -------
     sweep_dec : array_like
@@ -48,14 +48,17 @@ def main(icecube_file_name, output_file_name, n_dec_pts=1000):
                     np.cos(np.deg2rad(sweep_dec)))
     event_per_solid_angle = entries_in_bands / solid_angles
 
-    f_sweep = scipy.interpolate.interp1d(np.sin(np.deg2rad(sweep_dec)),
-                                         event_per_solid_angle,
-                                         kind='cubic',
-                                         bounds_error=False,
-                                         fill_value=0.0)
+    f_integrand = scipy.interpolate.interp1d(np.sin(np.deg2rad(sweep_dec)),
+                                             event_per_solid_angle,
+                                             kind='cubic',
+                                             bounds_error=False,
+                                             fill_value=0.0)
 
     # to perform the average, integrate over result and divide it out
-    sweep_counts_norm, err = scipy.integrate.quad(f_sweep, -1, 1)
+    sweep_counts_norm, err = scipy.integrate.quad(f_integrand,
+                                                  np.sin(np.deg2rad(sweep_lowerlimit)),
+                                                  np.sin(np.deg2rad(sweep_upperlimit)),
+                                                  limit=1000)
 
     # equation 2.2 in the paper
     P_B = event_per_solid_angle / sweep_counts_norm

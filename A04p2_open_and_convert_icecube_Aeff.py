@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def load_Aeff(input_file_names, output_file_name, alpha=2.5):
+def load_Aeff(input_file_names, output_file_name, alpha=2.5, verbose=False):
     """
     Loads IceCube detector effective volume, averages it by
     detector type (number of strings IceCube had deployed),
@@ -82,11 +82,12 @@ def load_Aeff(input_file_names, output_file_name, alpha=2.5):
         x_dec_steps[i_unique_decs] = unique_decs
         y_integrate_steps[i_unique_decs] = integrated_Aeff
 
-        print("%i \t %.2f \t %.2f \t %.2f \t %.2f " % (i_unique_decs,
-                                                       unique_decs,
-                                                       np.min(cur_E_max),
-                                                       np.max(cur_E_max),
-                                                       integrated_Aeff))
+        if(verbose):
+            print("%i \t %.2f \t %.2f \t %.2f \t %.2f " % (i_unique_decs,
+                                                           unique_decs,
+                                                           np.min(cur_E_max),
+                                                           np.max(cur_E_max),
+                                                           integrated_Aeff))
 
     # sort steps, just in case
     x_dec_steps, y_integrate_steps = zip(*sorted(zip(x_dec_steps, y_integrate_steps)))

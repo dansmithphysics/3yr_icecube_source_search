@@ -2,18 +2,20 @@ import glob
 import numpy as np
 
 
-def main(file_names):
+def main(raw_icecube_file_names, output_file_name):
     """
     Converts the IceCube data from fixed-width
     text files to numpy pickle files.
 
     Parameters
     ----------
-    file_names : array_like
+    raw_icecube_file_names : array_like
         List of strings to IceCube data file locations.
+    output_file_name : array_like
+        Name of output pickled IceCube data file locations.
     """
 
-    data_files = file_names
+    data_files = raw_icecube_file_names
     data_day = np.array([])
     data_sigmas = np.array([])
     data_ra = np.array([])
@@ -29,7 +31,7 @@ def main(file_names):
         data_ra = np.append(data_ra, data[:, 3])
         data_dec = np.append(data_dec, data[:, 4])
 
-    np.savez("processed_data/output_icecube_data.npz",
+    np.savez(output_file_name,
              data_day=data_day,
              data_sigmas=data_sigmas,
              data_ra=data_ra,
@@ -38,5 +40,6 @@ def main(file_names):
 
 if(__name__ == "__main__"):
 
-    file_names = glob.glob("./data/3year-data-release/IC*-events.txt")
-    main(file_names)
+    raw_icecube_file_names = glob.glob("./data/3year-data-release/IC*-events.txt")
+    output_file_name = "processed_data/output_icecube_data.npz"
+    main(raw_icecube_file_names, output_file_name)

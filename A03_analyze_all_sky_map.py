@@ -6,7 +6,7 @@ from multiprocessing import Pool
 
 
 def main(icecube_file_name, background_file_name, output_file_names,
-         step_size=5.0, n_cpu=4):
+         step_size=2.0, n_cpu=4):
     """
     Calculates B_i, the background PDF of the search.
     This is done by scrambling data in a 6 degree
@@ -81,4 +81,4 @@ if(__name__ == "__main__"):
     background_file_name = "./processed_data/output_icecube_background_count.npz"
     output_file_names = ["./processed_data/calculated_fit_likelihood_map_allsky.npy",
                          "./processed_data/calculated_fit_ns_map_allsky.npy"]
-    main(icecube_file_name, background_file_name, output_file_names, step_size=5, n_cpu=4)
+    main(icecube_file_name, background_file_name, output_file_names, step_size=2, n_cpu=4)

@@ -5,7 +5,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units
 
 
-def open_and_convert_catalog(fits_file_name, output_file_name):
+def open_and_convert_catalog(fits_file_name, output_file_name, verbose=False):
     """
     Opens the 4LAC FITS file and converts it to a numpy pickle file.
 
@@ -19,8 +19,9 @@ def open_and_convert_catalog(fits_file_name, output_file_name):
 
     hdul = fits.open(fits_file_name)
 
-    print(hdul.info())
-    print(hdul[1].columns.info())
+    if(verbose):
+        print(hdul.info())
+        print(hdul[1].columns.info())
 
     # Its possible this isn't right, but I think it is
     cat_names = hdul[1].data.field(0).tolist()
