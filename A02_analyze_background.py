@@ -1,66 +1,92 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate
 import scipy.interpolate
 
-# Looking to calculate B_i
-# we do this by scrambling data in a 6 degree
-# elevation angle band in the sky
-# We can't use a histogram since there is spill over between bands
 
-# Load up the IceCube data
-icecube_data = np.load("processed_data/output_icecube_data.npz",
-                       allow_pickle=True)
-data_dec = np.array(icecube_data["data_dec"])
+def main(icecube_file_name, output_file_name, n_dec_pts=1000):
+    """
+    Looking to calculate B_i, the background PDF of the search.
+    This is done by scrambling data in a 6 degree
+    declination angle band in the sky.
 
-# size of bins
-size_of_band = 3.0
-sweep_lowerlimit = -87.0
-sweep_upperlimit = 87.0
+    Parameters
+    ----------
+    icecube_file_name : str
+        IceCube pickle file location.
+    output_file_name : str
+        Output file name for processed background PDF.
 
-# sweep over different sin decs to calculate the B_i at that point
-sweep_dec = np.linspace(sweep_lowerlimit, sweep_upperlimit, 1000)
+    Returns
+    -------
+    sweep_dec : array_like
+        Array of declinations used to calculate PDF
 
-# Count number of entries in bin
-entries_in_bands = np.abs(data_dec[:, np.newaxis] - sweep_dec) < size_of_band
-entries_in_bands = np.sum(entries_in_bands, axis=0)
+    B_i : array_like
+        The background PDF, at each step in sweep_dec
+    """
+    
+    # Load up the IceCube data
+    icecube_data = np.load(icecube_file_name,
+                           allow_pickle=True)
+    data_dec = np.array(icecube_data["data_dec"])
 
-solid_angles = (2.0 * np.pi *
-                np.sin(np.deg2rad(size_of_band)) *
-                np.cos(np.deg2rad(sweep_dec)))
-event_per_solid_angle = entries_in_bands / solid_angles
+    # size of bins
+    size_of_band = 3.0
+    sweep_lowerlimit = -87.0
+    sweep_upperlimit = 87.0
 
-f_sweep = scipy.interpolate.interp1d(np.sin(np.deg2rad(sweep_dec)),
-                                     event_per_solid_angle,
-                                     kind='cubic',
-                                     bounds_error=False,
-                                     fill_value=0.0)
+    # sweep over different sin decs to calculate the B_i at that point
+    sweep_dec = np.linspace(sweep_lowerlimit, sweep_upperlimit, n_dec_pts)
 
-# to perform the average, integrate over result and divide it out
-sweep_counts_norm, err = scipy.integrate.quad(f_sweep, -1, 1)
+    # Count number of entries in bin
+    entries_in_bands = np.abs(data_dec[:, np.newaxis] - sweep_dec) < size_of_band
+    entries_in_bands = np.sum(entries_in_bands, axis=0)
 
-# equation 2.2 in the paper
-P_B = event_per_solid_angle / sweep_counts_norm
-B_i = P_B / (2.0 * np.pi)
+    solid_angles = (2.0 * np.pi *
+                    np.sin(np.deg2rad(size_of_band)) *
+                    np.cos(np.deg2rad(sweep_dec)))
+    event_per_solid_angle = entries_in_bands / solid_angles
 
-np.savez("processed_data/output_icecube_background_count.npz",
-         dec=sweep_dec,
-         B_i=B_i)
+    f_sweep = scipy.interpolate.interp1d(np.sin(np.deg2rad(sweep_dec)),
+                                         event_per_solid_angle,
+                                         kind='cubic',
+                                         bounds_error=False,
+                                         fill_value=0.0)
 
-plt.figure()
-plt.plot(np.sin(np.deg2rad(sweep_dec)), B_i)
-plt.xlim(-1.0, 1.0)
-plt.ylim(0.0, 0.2)
-plt.legend()
-plt.grid()
+    # to perform the average, integrate over result and divide it out
+    sweep_counts_norm, err = scipy.integrate.quad(f_sweep, -1, 1)
 
-# make a figure of the data sin dec, just a raw plot
-plt.figure()
-plt.title("3 Year IceCube Data, $\sin(\delta)$, N="+str(len(data_dec))+" Events")
-plt.hist(np.sin(np.deg2rad(data_dec)), range=(-1, 1), bins=50)
-plt.xlabel("$\sin(\delta)$")
-plt.xlim(-1.0, 1.0)
-plt.axvline(np.sin(np.deg2rad(sweep_lowerlimit)), color='red')
-plt.axvline(np.sin(np.deg2rad(sweep_upperlimit)), color='red')
-plt.grid()
-plt.show()
+    # equation 2.2 in the paper
+    P_B = event_per_solid_angle / sweep_counts_norm
+    B_i = P_B / (2.0 * np.pi)
+
+    np.savez(output_file_name,
+             dec=sweep_dec,
+             B_i=B_i)
+
+    return sweep_dec, B_i
+
+
+if(__name__ == "__main__"):
+    icecube_file_name = "processed_data/output_icecube_data.npz"
+    output_file_name = "processed_data/output_icecube_background_count.npz"
+    sweep_dec, B_i = main(icecube_file_name, output_file_name)
+    
+    plt.figure()
+    plt.plot(sweep_dec, B_i, color='black')
+    plt.axvline(-87.0, color='red')
+    plt.axvline(87.0, color='red', label="Declincation Limit of Search")
+    plt.xlabel(r"Declination [$^\circ$]")
+    plt.ylabel("Background PDF")
+    plt.xlim(-90.0, 90.0)
+    plt.ylim(0.0, 0.15)
+    plt.grid()
+    plt.legend()
+
+    plt.savefig("./plots/A02_analyze_background.png", dpi=300)
+    
+    plt.show()

@@ -5,8 +5,19 @@ from astropy.coordinates import SkyCoord
 from astropy import units
 
 
-def open_and_convert_catalog(file_name, output_file_name):
-    hdul = fits.open(file_name)
+def open_and_convert_catalog(fits_file_name, output_file_name):
+    """
+    Opens the 4LAC FITS file and converts it to a numpy pickle file.
+
+    Parameters
+    ----------
+    fits_file_name : str
+        File location of the 4LAC catalog FITS file.
+    output_file_name : str
+        Output file location of numpy pickle file.
+    """
+
+    hdul = fits.open(fits_file_name)
 
     print(hdul.info())
     print(hdul[1].columns.info())
@@ -29,15 +40,24 @@ def open_and_convert_catalog(file_name, output_file_name):
              cat_z=cat_z,
              cat_var_index=cat_var_index)
 
-    
-def plot_catalog(file_name):
 
-    catalog_data = np.load(file_name)
+def plot_catalog(catalog_file_name):
+    """
+    Creates some diagnostic plots of the
+    4LAC catalog.
+
+    Parameters
+    ----------
+    catalog_file_name : str
+        File location of pickle 4LAC catalog file.
+    """
+
+    catalog_data = np.load(catalog_file_name)
     cat_var_index = catalog_data['cat_var_index']
     cat_flux1000 = catalog_data['cat_flux1000']
     cat_ra = catalog_data['cat_ra']
     cat_dec = catalog_data['cat_dec']
-    
+
     plt.figure()
     plt.hist(cat_var_index,
              log=True,
@@ -80,7 +100,9 @@ def plot_catalog(file_name):
 
 if(__name__ == "__main__"):
 
-    open_and_convert_catalog("./data/table_4LAC.fits",
-                             "./processed_data/4LAC_catelogy.npz")
+    fits_file_name = "./data/table_4LAC.fits"
+    output_file_name = "./processed_data/4LAC_catelogy.npz"
+    open_and_convert_catalog(fits_file_name,
+                             output_file_name)
 
-    plot_catalog("./processed_data/4LAC_catelogy.npz")
+    plot_catalog(output_file_name)

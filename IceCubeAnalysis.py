@@ -9,11 +9,10 @@ class SourceSearch:
 
     def __init__(self, icecube_filename):
         
-        data_ra, data_dec, data_sigmas, data_file_year = self.load_icecube_data(icecube_filename)
+        data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_filename)
     
         self.N = len(data_sigmas)
         self.cord_i = np.stack((data_ra, data_dec), axis=1)
-        self.data_file_year = data_file_year
         self.data_sigmas = data_sigmas
 
         # Compute these sin/coss once to save computation time later
@@ -98,15 +97,13 @@ class SourceSearch:
         data_sigmas = np.array(icecube_data["data_sigmas"])
         data_ra = np.array(icecube_data["data_ra"])
         data_dec = np.array(icecube_data["data_dec"])
-        data_file_year = np.array(icecube_data["data_file_year"])
 
         allowed_entries = data_sigmas != 0.0
         data_ra = data_ra[allowed_entries]
         data_dec = data_dec[allowed_entries]
         data_sigmas = data_sigmas[allowed_entries]
-        data_file_year = data_file_year[allowed_entries]
 
-        return data_ra, data_dec, data_sigmas, data_file_year
+        return data_ra, data_dec, data_sigmas
 
 
     def job_submission(self, cord_s, i_source, close_point_cut=10, significance_cut=1e-10):
@@ -149,7 +146,7 @@ class SourceSearch:
                                                 data_bg['B_i'],
                                                 kind='cubic',
                                                 bounds_error=False,
-                                                fill_value="extrapolate")
+                                                fill_value='extrapolate')
 
 
 class SourceClassSearch:
@@ -292,3 +289,31 @@ class SourceClassSearch:
             sweep_fluxes[i_given_para] = np.power(self.E2, 2.0) * current_flux / (4.0 * np.pi)
 
         return sweep_fluxes, ts_results
+
+
+def prepare_skymap_coordinates(step_size):
+    """
+    Returns the RA and Dec for each point, and a map with the index
+    """
+
+    ra_sweep = np.arange(0, 360, step_size)
+    dec_sweep = np.arange(-90, 90, step_size)
+
+    ra_len = len(ra_sweep)
+    dec_len = len(dec_sweep)
+
+    total_pts = dec_len * ra_len
+
+    ras = np.zeros(total_pts)
+    decs = np.zeros(total_pts)
+
+    i_source = 0
+    for iX in range(ra_len):
+        for iY in range(dec_len):
+            ras[i_source] = ra_sweep[iX]
+            decs[i_source] = dec_sweep[iY]
+            i_source += 1
+
+    cords = np.stack((ras, decs), axis=1)
+    
+    return cords, ra_len, dec_len
