@@ -8,9 +8,11 @@ from multiprocessing import Pool
 def main(icecube_file_name, background_file_name, output_file_names,
          step_size=2.0, n_cpu=4):
     """
-    Calculates B_i, the background PDF of the search.
-    This is done by scrambling data in a 6 degree
-    declination angle band in the sky.
+    Performs the all-sky source search. The script breaks the sky into
+    a grid, with step between points defined by `step_size`. For each point,
+    we find the most likely value of astrophysical neutrinos from the
+    source at the given point. Creates a map of the max-likelihood and
+    most-likely number of neutrinos from each point.
 
     Parameters
     ----------

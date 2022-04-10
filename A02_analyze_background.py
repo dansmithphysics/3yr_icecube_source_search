@@ -16,7 +16,7 @@ def main(icecube_file_name, output_file_name, n_dec_pts=1000):
         IceCube pickle file location.
     output_file_name : str
         Output file name for processed background PDF.
-n
+
     Returns
     -------
     sweep_dec : array_like
@@ -47,7 +47,7 @@ n
                     np.sin(np.deg2rad(size_of_band)) *
                     np.cos(np.deg2rad(sweep_dec)))
     event_per_solid_angle = entries_in_bands / solid_angles
-
+    
     f_integrand = scipy.interpolate.interp1d(np.sin(np.deg2rad(sweep_dec)),
                                              event_per_solid_angle,
                                              kind='cubic',
