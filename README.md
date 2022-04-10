@@ -36,6 +36,8 @@ All scripts were built in Python 3.9.5.
 
 ### IceCubeAnalysis.py
 
+First, we load common libraries and `IceCubeAnalysis`, a custom library with two classes, the first (`SourceSearch`) that handle the creation of the neutrino source likelihood function given a source location to test and the second (`SourceClassSearch`) that handles the loading of 4LAC sources.
+
 ### A01_open_and_convert_icecube_data.py
 
 Converts the IceCube data from fixed-width text files to numpy pickle files.
