@@ -14,7 +14,11 @@ The 4LAC catalog is available from Fermi's website, [linked here](https://fermi.
 
 ## Example Analysis in Jupyter Notebooks
 
-For ease of use and visualization, I've created the following Jupyter Notebooks that step you through pre-processing the data (`J01`), the all-sky source search (`J02`), and the source class search (`J03`). 
+For ease of use and visualization, I've created the following Jupyter Notebooks that step you through the definition of the likelihood used to find sources (`J00`), pre-processing the data (`J01`), the all-sky source search (`J02`), and the source class search (`J03`). 
+
+### J00_math.ipynb
+
+A brief overview of the math used to define likelihoods and perform the source class search.
 
 ### J01_preprocess_data.ipynb
 
