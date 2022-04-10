@@ -5,11 +5,46 @@ from scipy.optimize import minimize_scalar
 
 
 class SourceSearch:
+    """
+    A class that handles the likelihood 
+    computations for sources within the IceCube
+    track data.
+
+    Attributes
+    ----------
+    N : int
+        Number of events in IceCube Data
+    cord_i : array_like
+        Array of (ra, dec) of IceCube track data
+    data_sigmas : array_like
+        Standard deviation of IceCube track data in degrees
+    sindec : array_like
+        Pre-computed sin of the declination of IceCube track
+        data, used to speed up S_i calculation.
+    cosdec : array_like
+        Pre-computed cos of the declination of IceCube track
+        data, used to speed up S_i calculation.
+    f_B_i : scipy function
+        Function of the background PDF's dependance on declination 
+
+    Methods
+    -------
+    info(additional=""):
+        Prints the person's name and age.
+    """
 
 
-    def __init__(self, icecube_filename):
+    def __init__(self, icecube_file_name):
+        """
+        Loads up the IceCube data.
+
+        Parameters
+        ----------
+        icecube_file_name : str
+            IceCube pickle file location.
+        """
         
-        data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_filename)
+        data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_file_name)
     
         self.N = len(data_sigmas)
         self.cord_i = np.stack((data_ra, data_dec), axis=1)
@@ -29,6 +64,15 @@ class SourceSearch:
         ----------
         cord_s : array_like
             The (ra, dec) position on sky that is being tested.
+        close_point_cut : float
+            Remove data events that are further than 
+            close_point_cut degrees away. 
+            Speeds up computation considerably. 
+
+        Returns
+        -------
+        S_i : array_like
+            The signal PDF of each event in the dataset.
         """
         
         if(close_point_cut is None):
@@ -52,12 +96,25 @@ class SourceSearch:
         """
         Calculates the test statistic for a given
         number of clustered neutrinos (n_s) and
-        given signal pdf (S_i), background pdf (B_i),
-        and the total number of events (N).
+        given signal pdf (S_i), background pdf (B_i).
 
+        Parameters
+        ----------
+        n_s : float
+            The number of neutrinos from the source tested.
+        S_i : array_like
+            The signal PDF of each event in the dataset.
+        B_i : float
+            The background PDF of the source being tested.
         N_zeros : int
-            Cheat 
-
+            The number of S_i points that were removed from S_i
+            due to being too small. Removing S_i points that
+            have nearly zero contribution greatly speeds up computation.
+        
+        Returns
+        -------
+        out : float
+            The calculated likelihood. Zero if n_s is below zero.
         """
 
         result_ = n_s / self.N * S_i + (1.0 - n_s / self.N) * B_i
@@ -76,8 +133,21 @@ class SourceSearch:
         ----------
         cord_s : array_like
             The cordesian position on sky that is being tested.
-        n_s : int
-            The number of neutrinos being tested for that point
+        n_s : float
+            The number of neutrinos from the source tested.
+        S_i : array_like
+            The signal PDF of each event in the dataset.
+        B_i : float
+            The background PDF of the source being tested.
+        N_zeros : int
+            The number of S_i points that were removed from S_i
+            due to being too small. Removing S_i points that
+            have nearly zero contribution greatly speeds up computation.
+
+        Returns
+        -------
+        out : float
+            The calculated test statistic.
         """
 
         if(S_i is None):
@@ -91,8 +161,27 @@ class SourceSearch:
         return 2.0 * (del_ln_L_n_s - del_ln_L_0)
 
 
-    def load_icecube_data(self, file_name):
-        icecube_data = np.load(file_name, allow_pickle=True)
+    def load_icecube_data(self, icecube_file_name):
+        """
+        Loads the pickled IceCube Data.
+        
+        Parameters
+        ----------
+        icecube_file_name : str
+            IceCube pickle file location.
+
+        Returns
+        -------
+        data_ra : array_like
+            RA of IceCube track data
+        data_dec : array_like
+            Dec of IceCube track data
+        data_sigmas : array_like
+            Standard deviation of IceCube track data in degrees
+        """
+
+        icecube_data = np.load(icecube_file_name,
+                               allow_pickle=True)
 
         data_sigmas = np.array(icecube_data["data_sigmas"])
         data_ra = np.array(icecube_data["data_ra"])
@@ -106,8 +195,55 @@ class SourceSearch:
         return data_ra, data_dec, data_sigmas
 
 
-    def job_submission(self, cord_s, i_source, close_point_cut=10, significance_cut=1e-10):
+    def load_background(self, background_file_name):
+        """
+        Loads the preprocessed background PDF.
+        The background pdf is loaded to a scipy interpolate function.
 
+        Parameters
+        ----------
+        background_file_name : str
+            File location of background pdf.
+        """
+
+        data_bg = np.load(background_file_name,
+                          allow_pickle=True)
+
+        self.f_B_i = scipy.interpolate.interp1d(data_bg['dec'],
+                                                data_bg['B_i'],
+                                                kind='cubic',
+                                                bounds_error=False,
+                                                fill_value='extrapolate')
+
+
+    def job_submission(self, cord_s, i_source, close_point_cut=10, significance_cut=1e-10):
+        """
+        Function that handles the parallelization of the all-sky map.
+        Computes the max-likelihood number of neutrinos from the source. 
+
+        Parameters
+        ----------
+        cord_s : array_like
+            The (ra, dec) position on sky that is being tested.
+        i_source : int
+            The integer of the source being tested, used only for print outs.
+        close_point_cut : float
+            Remove S_i of data events that are further than
+            close_point_cut degrees away.
+            Speeds up computation considerably.
+        significance_cut : float
+            Remove S_i of data events that produce a significance
+            lower than significance_cut.
+            Speeds up computation considerably.
+
+        Parameters
+        ----------
+        n_s : float
+            Max likelihood number of neutrinos from source being tested.
+        del_ln_L : float
+            The max likelihood from source being tested.            
+        """
+        
         S_i = self.Si_likelihood(cord_s, close_point_cut=close_point_cut)
         B_i = self.f_B_i(cord_s[1])
         
@@ -116,7 +252,8 @@ class SourceSearch:
         N_zeros = self.N - len(S_i)
                     
         # Before jumping in, we check to make sure the n_s will be positive
-        slope = (self.calculate_likelihood(0.05, S_i, B_i, N_zeros) - self.calculate_likelihood(0.0, S_i, B_i, N_zeros))
+        slope = (self.calculate_likelihood(0.05, S_i, B_i, N_zeros) -
+                 self.calculate_likelihood(0.0, S_i, B_i, N_zeros))
 
         if(slope > 0):
 
@@ -131,7 +268,8 @@ class SourceSearch:
         else:
             n_s = 0
         
-        del_ln_L = (self.calculate_likelihood(n_s, S_i, B_i, N_zeros) - self.calculate_likelihood(0.0, S_i, B_i, N_zeros))
+        del_ln_L = (self.calculate_likelihood(n_s, S_i, B_i, N_zeros) -
+                    self.calculate_likelihood(0.0, S_i, B_i, N_zeros))
 
         if(i_source % 1000 == 0):
             print("%i) \t n_s = \t %f" % (i_source, n_s))
@@ -139,18 +277,9 @@ class SourceSearch:
         return n_s, del_ln_L
 
 
-    def load_background(self, file_name):
-        data_bg = np.load(file_name, allow_pickle=True)
-
-        self.f_B_i = scipy.interpolate.interp1d(data_bg['dec'],
-                                                data_bg['B_i'],
-                                                kind='cubic',
-                                                bounds_error=False,
-                                                fill_value='extrapolate')
-
-
 class SourceClassSearch:
 
+    
     def __init__(self, T, E1, E2, alpha, sourcesearch, Aeff_filename):
         self.T = T
         self.E1 = E1
@@ -293,7 +422,23 @@ class SourceClassSearch:
 
 def prepare_skymap_coordinates(step_size):
     """
-    Returns the RA and Dec for each point, and a map with the index
+    Prepares the coordinates for the all-sky search.
+       
+    Parameters
+    ----------
+    step_size : float
+        The steps in degrees taken in RA and Dec to 
+        calculate the all-sky map.
+
+    Returns
+    -------
+    cords : array_like
+        The (ra, dec) of each point in the sky
+        that will be tested to perform the all-sky search.
+    ra_len : int
+        The number of RA steps.
+    dec_len : int
+        The number of declination steps.
     """
 
     ra_sweep = np.arange(0, 360, step_size)
