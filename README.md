@@ -42,7 +42,7 @@ Converts the IceCube data from fixed-width text files to numpy pickle files.
 
 ### A02_analyze_background.py
 
-Calculates $B_i$, the background PDF of the neutrino source search. This is done empirically by scrambling RA of track data in a $6^\circ$ declination angle band in the sky.
+Calculates B_i, the background PDF of the neutrino source search. This is done empirically by scrambling RA of track data in a 6 degree declination angle band in the sky.
 
 ### A03_analyze_all_sky_map.py
 
@@ -67,4 +67,4 @@ Loads IceCube detector effective volume, averages it by detector type (number of
 
 ### A05_analyze_source_classes_limits.py
 
-For points in the sky from the 4LAC catalog, the function scans over the number of neutrinos in the data from the source class and calculates the likelihood. The number of neutrinos associated to each source in the source class is determined by a weighting, which is described in more detail in the paper. If a statistically significant number of tracks in the data are associated with this source class, the resulting likelihood will peak above $3\sigma$.
+For points in the sky from the 4LAC catalog, the function scans over the number of neutrinos in the data from the source class and calculates the likelihood. The number of neutrinos associated to each source in the source class is determined by a weighting, which is described in more detail in the paper. If a statistically significant number of tracks in the data are associated with this source class, the resulting likelihood will peak above 3sigma.
