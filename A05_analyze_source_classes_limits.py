@@ -55,7 +55,9 @@ def main(icecube_file_name, background_file_name, catalog_file_name, source_clas
 
     if(n_cpu is not None):
         use_parallel = True
-
+    else:
+        use_parallel = False
+        
     sourcesearch_ = IceCubeAnalysis.SourceSearch(icecube_file_name)
     sourcesearch_.load_background(background_file_name)
 
@@ -125,7 +127,7 @@ if(__name__ == "__main__"):
     icecube_file_name = "./processed_data/output_icecube_data.npz"
     background_file_name = "./processed_data/output_icecube_background_count.npz"
 
-    source_class_names = ['FSRQ', 'bll', 'FSRQ', 'fsrq', 'BCU', 'bcu']
+    source_class_names = ['BLL', 'bll', 'FSRQ', 'fsrq', 'BCU', 'bcu']
 
     weights_types = ['flat', 'flux', 'dist']
     colors = ['orange', 'green', 'blue']

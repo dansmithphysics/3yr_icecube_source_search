@@ -205,7 +205,7 @@ class SourceSearch:
                                                 bounds_error=False,
                                                 fill_value='extrapolate')
 
-    def job_submission(self, cord_s, i_source, close_point_cut=10, significance_cut=1e-10):
+    def job_submission(self, cord_s, i_source, close_point_cut=None, significance_cut=1e-10):
         """
         Function that handles the parallelization of the all-sky map.
         Computes the max-likelihood number of neutrinos from the source.
@@ -390,6 +390,34 @@ class SourceClassSearch:
         cat_z = catelog_data["cat_z"]
         cat_var_index = catelog_data["cat_var_index"]
 
+        # Modify the non-blazar AGN catalog to match the paper
+        cat_names = np.append(cat_names, ["Custom 3C 411"])
+        cat_flux1000 = np.append(cat_flux1000, [3.5e-12 / 0.011636])
+        cat_type = np.append(cat_type, ['rdg'])
+        cat_ra = np.append(cat_ra, [305.5333])
+        cat_dec = np.append(cat_dec, [10.0197])
+        cat_var_index = np.append(cat_var_index, [0.0])
+        cat_z = np.append(cat_z, [0.457])
+
+        cat_names = np.append(cat_names, ["Custom Cen B"])
+        cat_flux1000 = np.append(cat_flux1000, [2.5471e-09])
+        cat_type = np.append(cat_type, ['rdg'])
+        cat_ra = np.append(cat_ra, [206.59])
+        cat_dec = np.append(cat_dec, [-60.4461])
+        cat_var_index = np.append(cat_var_index, [6.528250])
+        cat_z = np.append(cat_z, [0.0129])
+
+        # Merge the two Cens
+        cat_flux1000[cat_names=="4FGL J1325.5-4300 "] += cat_flux1000[cat_names=="4FGL J1324.0-4330e"]
+
+        cat_flux1000 = np.delete(cat_flux1000, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_type = np.delete(cat_type, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_ra = np.delete(cat_ra, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_dec = np.delete(cat_dec, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_var_index = np.delete(cat_var_index, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_z = np.delete(cat_z, np.where(cat_names=="4FGL J1324.0-4330e"))
+        cat_names = np.delete(cat_names, np.where(cat_names=="4FGL J1324.0-4330e"))
+        
         allowed_names_mask = np.zeros(len(cat_dec))
         for i in range(len(source_class_names)):
             allowed_names_mask[cat_type == source_class_names[i]] = 1
@@ -434,6 +462,7 @@ class SourceClassSearch:
         self.cat_names = self.cat_names[allowed_values]
         self.cat_flux1000 = self.cat_flux1000[allowed_values]
         self.cat_z = self.cat_z[allowed_values]
+        self.cat_flux_weights = self.cat_flux_weights[allowed_values]
         self.N = len(self.cat_ra)
 
     def luminosity_distance_from_redshift(self, z):
@@ -513,7 +542,7 @@ class SourceClassSearch:
         para_span = np.power(10.0, np.linspace(np.log10(para_min), np.log10(para_max), n_entries))
         return para_span
 
-    def source_loop(self, i_source, close_point_cut=10, significance_cut=1e-10, n_entries=40):
+    def source_loop(self, i_source, close_point_cut=None, significance_cut=1e-10, n_entries=40):
         """
         Function used to compute the likelihood that a single source
         from the source class produced neutrinos, at a sweep over neutrino fluxes.
