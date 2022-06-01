@@ -74,3 +74,7 @@ Loads IceCube detector effective volume, averages it by detector type (number of
 ### A05_analyze_source_classes_limits.py
 
 For points in the sky from the 4LAC catalog, the function scans over the number of neutrinos in the data from the source class and calculates the likelihood. The number of neutrinos associated to each source in the source class is determined by a weighting, which is described in more detail in the paper. If a statistically significant number of tracks in the data are associated with this source class, the resulting likelihood will peak above 3sigma.
+
+### A05p1_plot_source_classes_limits.py
+
+Plotting the limits, both in energy vs. likelihood and energy vs. flux, based on the outputs from A05_analyze_source_classes_limits.py.

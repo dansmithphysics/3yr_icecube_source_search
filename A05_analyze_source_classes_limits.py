@@ -127,6 +127,8 @@ if(__name__ == "__main__"):
     icecube_file_name = "./processed_data/output_icecube_data.npz"
     background_file_name = "./processed_data/output_icecube_background_count.npz"
 
+    output_file_preamble = "invar_blazar"
+    
     source_class_names = ['BLL', 'bll', 'FSRQ', 'fsrq', 'BCU', 'bcu']
 
     weights_types = ['flat', 'flux', 'dist']
@@ -147,13 +149,16 @@ if(__name__ == "__main__"):
                                                               alpha=alpha,
                                                               weights_type=weights_type,
                                                               n_cpu=4,
-                                                              var_index_cut=None)
+                                                              var_index_cut=18.48)
 
+            np.savez("./processed_data/output_analysis_%s_alpha%.1f_%s_limit.npz" % (output_file_preamble, alpha, weights_type),
+                     flux_span=sweep_flux, results=sweep_ts)
+            
             plt.semilogx(np.array(sweep_flux)[sweep_ts < 1e3],
                          sweep_ts[sweep_ts < 1e3],
                          linestyle=linestyles[i_alpha],
-                         color=colors[i_weights_type])
-
+                         color=colors[i_weights_type])            
+            
     for i_weights_type, weights_type in enumerate(weights_types):
         plt.plot([], [], color=colors[i_weights_type], label=labels[i_weights_type])
 
