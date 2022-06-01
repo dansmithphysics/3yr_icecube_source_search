@@ -30,8 +30,7 @@ def main(icecube_file_name, background_file_name, output_file_names,
         If n_cpu is None, the computation is not parallelized.
     """
 
-    if(n_cpu is not None):
-        use_parallel = True
+    use_parallel = (n_cpu is not None)
 
     sourcesearch_ = IceCubeAnalysis.SourceSearch(icecube_file_name)
     sourcesearch_.load_background(background_file_name)
