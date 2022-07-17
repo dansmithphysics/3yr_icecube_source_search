@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy.interpolate
 import scipy.integrate
 from scipy.optimize import minimize_scalar
@@ -38,6 +39,7 @@ class SourceSearch:
             IceCube pickle file location.
         """
 
+        
         data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_file_name)
 
         self.N = len(data_sigmas)
@@ -170,13 +172,11 @@ class SourceSearch:
         data_sigmas : array_like
             Standard deviation of IceCube track data in degrees
         """
+        df = pd.read_pickle(icecube_file_name)
 
-        icecube_data = np.load(icecube_file_name,
-                               allow_pickle=True)
-
-        data_sigmas = np.array(icecube_data["data_sigmas"])
-        data_ra = np.array(icecube_data["data_ra"])
-        data_dec = np.array(icecube_data["data_dec"])
+        data_sigmas = np.array(df["AngErr[deg]"])
+        data_ra = np.array(df["RA[deg]"])
+        data_dec = np.array(df["Dec[deg]"])
 
         allowed_entries = data_sigmas != 0.0
         data_ra = data_ra[allowed_entries]
@@ -196,11 +196,10 @@ class SourceSearch:
             File location of background pdf.
         """
 
-        data_bg = np.load(background_file_name,
-                          allow_pickle=True)
+        df_bg = pd.read_pickle(background_file_name)
 
-        self.f_B_i = scipy.interpolate.interp1d(data_bg['dec'],
-                                                data_bg['B_i'],
+        self.f_B_i = scipy.interpolate.interp1d(df_bg['Dec[deg]'],
+                                                df_bg['B_i'],
                                                 kind='cubic',
                                                 bounds_error=False,
                                                 fill_value='extrapolate')

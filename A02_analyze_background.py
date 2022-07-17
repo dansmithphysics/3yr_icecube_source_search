@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.integrate
 import scipy.interpolate
@@ -27,9 +28,9 @@ def main(icecube_file_name, output_file_name, n_dec_pts=1000):
     """
     
     # Load up the IceCube data
-    icecube_data = np.load(icecube_file_name,
-                           allow_pickle=True)
-    data_dec = np.array(icecube_data["data_dec"])
+    df = pd.read_pickle(icecube_file_name)    
+    
+    data_dec = np.array(df["Dec[deg]"]) #icecube_data["data_dec"])
 
     # size of bins
     size_of_band = 3.0
@@ -64,16 +65,15 @@ def main(icecube_file_name, output_file_name, n_dec_pts=1000):
     P_B = event_per_solid_angle / sweep_counts_norm
     B_i = P_B / (2.0 * np.pi)
 
-    np.savez(output_file_name,
-             dec=sweep_dec,
-             B_i=B_i)
+    df_bg = pd.DataFrame({"Dec[deg]":sweep_dec, "B_i":B_i})
+    df_bg.to_pickle(output_file_name)
 
     return sweep_dec, B_i
 
 
 if(__name__ == "__main__"):
-    icecube_file_name = "processed_data/output_icecube_data.npz"
-    output_file_name = "processed_data/output_icecube_background_count.npz"
+    icecube_file_name = "processed_data/output_icecube_data.pkl"
+    output_file_name = "processed_data/output_icecube_background_count.pkl"
     sweep_dec, B_i = main(icecube_file_name, output_file_name)
     
     plt.figure()

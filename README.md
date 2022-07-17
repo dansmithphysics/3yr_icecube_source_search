@@ -1,5 +1,3 @@
-testing
-
 # Source Search in 3 Years of Muon Track Data in IceCube
 
 This repository documents the analysis code used to produce the results from the following paper:

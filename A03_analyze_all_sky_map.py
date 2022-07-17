@@ -78,8 +78,8 @@ def main(icecube_file_name, background_file_name, output_file_names,
 
 
 if(__name__ == "__main__"):
-    icecube_file_name = "./processed_data/output_icecube_data.npz"
-    background_file_name = "./processed_data/output_icecube_background_count.npz"
+    icecube_file_name = "./processed_data/output_icecube_data.pkl"
+    background_file_name = "./processed_data/output_icecube_background_count.pkl"
     output_file_names = ["./processed_data/calculated_fit_likelihood_map_allsky.npy",
                          "./processed_data/calculated_fit_ns_map_allsky.npy"]
-    main(icecube_file_name, background_file_name, output_file_names, step_size=2, n_cpu=4)
+    main(icecube_file_name, background_file_name, output_file_names, step_size=10, n_cpu=4)
