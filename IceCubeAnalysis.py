@@ -17,7 +17,7 @@ class SourceSearch:
         Number of events in IceCube Data
     cord_i : array_like
         Array of (ra, dec) of IceCube track data
-    data_sigmas : array_like
+    AngErr[deg] : array_like
         Standard deviation of IceCube track data in degrees
     sindec : array_like
         Pre-computed sin of the declination of IceCube track
@@ -39,17 +39,14 @@ class SourceSearch:
             IceCube pickle file location.
         """
 
+        self.df = pd.read_pickle(icecube_file_name)
+        self.df = self.df[self.df["AngErr[deg]"] != 0]    
+
+        # Compute these sin/cos once to save computation time later
+        self.df["sindec"] = np.sin(np.deg2rad(self.df["Dec[deg]"]))
+        self.df["cosdec"] = np.cos(np.deg2rad(self.df["Dec[deg]"]))
+
         
-        data_ra, data_dec, data_sigmas = self.load_icecube_data(icecube_file_name)
-
-        self.N = len(data_sigmas)
-        self.cord_i = np.stack((data_ra, data_dec), axis=1)
-        self.data_sigmas = data_sigmas
-
-        # Compute these sin/coss once to save computation time later
-        self.sindec = np.sin(np.deg2rad(self.cord_i[:, 1]))
-        self.cosdec = np.cos(np.deg2rad(self.cord_i[:, 1]))
-
     def Si_likelihood(self, cord_s, close_point_cut=None):
         """
         Calculates the signal PDF at a given
@@ -70,20 +67,22 @@ class SourceSearch:
             The signal PDF of each event in the dataset.
         """
 
+        cord_i_ = np.stack((self.df["RA[deg]"], self.df["Dec[deg]"]), axis=1)
+        
         if(close_point_cut is None):
-            close_points = np.ones(self.N).astype('bool')
+            close_points = np.ones(len(self.df)).astype('bool')
         else:
-            close_points = np.sum(np.square(cord_s - self.cord_i), axis=1) < np.square(close_point_cut)
-
-        cosA = (self.sindec[close_points] * np.sin(np.deg2rad(cord_s[1]))
-                + self.cosdec[close_points] * np.cos(np.deg2rad(cord_s[1]))
-                * np.cos(np.deg2rad(self.cord_i[close_points, 0] - cord_s[0])))
+            close_points = np.sum(np.square(cord_s - cord_i_), axis=1) < np.square(close_point_cut)
+            
+        cosA = (self.df["sindec"][close_points] * np.sin(np.deg2rad(cord_s[1]))
+                + self.df["cosdec"][close_points] * np.cos(np.deg2rad(cord_s[1]))
+                * np.cos(np.deg2rad(cord_i_[close_points, 0] - cord_s[0])))
         great_dists = np.arccos(cosA)
 
         # This has to be in radians.
-        data_sigmas_ = np.deg2rad(self.data_sigmas[close_points])
-        S_i = 1.0 / (2.0 * np.pi * data_sigmas_ * data_sigmas_)
-        S_i *= np.exp(-0.5 * np.square(great_dists / data_sigmas_))
+        AngErr_ = np.deg2rad(self.df["AngErr[deg]"][close_points])
+        S_i = 1.0 / (2.0 * np.pi * AngErr_ * AngErr_)
+        S_i *= np.exp(-0.5 * np.square(great_dists / AngErr_))
 
         return S_i
 
@@ -112,12 +111,12 @@ class SourceSearch:
             The calculated likelihood. Zero if n_s is below zero.
         """
 
-        result_ = n_s / self.N * S_i + (1.0 - n_s / self.N) * B_i
+        result_ = n_s / len(self.df) * S_i + (1.0 - n_s / len(self.df)) * B_i
 
         if(np.any(result_ <= 0)):
             return 0.0
         else:
-            return np.sum(np.log(result_)) + N_zeros * np.log((1.0 - n_s / self.N) * B_i)
+            return np.sum(np.log(result_)) + N_zeros * np.log((1.0 - n_s / len(self.df)) * B_i)
 
     def test_statistic_at_point(self, cord_s, n_s, S_i=None, B_i=None, N_zeros=0):
         """
@@ -153,37 +152,6 @@ class SourceSearch:
         del_ln_L_0 = self.calculate_likelihood(0.0, S_i, B_i, N_zeros)
 
         return 2.0 * (del_ln_L_n_s - del_ln_L_0)
-
-    def load_icecube_data(self, icecube_file_name):
-        """
-        Loads the pickled IceCube Data.
-
-        Parameters
-        ----------
-        icecube_file_name : str
-            IceCube pickle file location.
-
-        Returns
-        -------
-        data_ra : array_like
-            RA of IceCube track data
-        data_dec : array_like
-            Dec of IceCube track data
-        data_sigmas : array_like
-            Standard deviation of IceCube track data in degrees
-        """
-        df = pd.read_pickle(icecube_file_name)
-
-        data_sigmas = np.array(df["AngErr[deg]"])
-        data_ra = np.array(df["RA[deg]"])
-        data_dec = np.array(df["Dec[deg]"])
-
-        allowed_entries = data_sigmas != 0.0
-        data_ra = data_ra[allowed_entries]
-        data_dec = data_dec[allowed_entries]
-        data_sigmas = data_sigmas[allowed_entries]
-
-        return data_ra, data_dec, data_sigmas
 
     def load_background(self, background_file_name):
         """
@@ -237,7 +205,7 @@ class SourceSearch:
 
         non_zero_S_i = (S_i > significance_cut)
         S_i = S_i[non_zero_S_i]
-        N_zeros = self.N - len(S_i)
+        N_zeros = len(self.df) - len(S_i)
 
         # Before jumping in, we check to make sure the n_s will be positive
         slope = (self.calculate_likelihood(0.05, S_i, B_i, N_zeros) -
