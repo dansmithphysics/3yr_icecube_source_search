@@ -76,13 +76,13 @@ def main(icecube_file_name, background_file_name, catalog_file_name, source_clas
     if(var_index_cut is not None):
         class_search.var_index_cut(var_index_cut)
 
-    print("Number of Sources:\t %i" % class_search.N)
-    print("Number of Events:\t %i" % sourcesearch_.N)
+    print("Number of Sources:\t %i" % len(class_search.df_cat))
+    print("Number of Events:\t %i" % len(sourcesearch_.df))
 
     start_time = time.time()
 
     if(use_parallel):
-        args_for_multiprocessing = np.arange(class_search.N)
+        args_for_multiprocessing = np.arange(len(class_search.df_cat))
 
         pool = Pool(n_cpu)
         parallel_results = pool.map(class_search.source_loop,
@@ -100,9 +100,9 @@ def main(icecube_file_name, background_file_name, catalog_file_name, source_clas
 
         sweep_ts = np.zeros(len(parameterized_span))
         sweep_flux = np.zeros(len(parameterized_span))
-        sweep_ts_each_source = np.zeros((len(parameterized_span), class_search.N))
+        sweep_ts_each_source = np.zeros((len(parameterized_span), len(class_search.df_cat)))
 
-        for i_source in range(class_search.N):
+        for i_source in range(len(class_search.df_cat)):
             sweep_fluxes_, ts_results_ = class_search.source_loop(i_source)
 
             sweep_flux += sweep_fluxes_
@@ -123,9 +123,9 @@ def main(icecube_file_name, background_file_name, catalog_file_name, source_clas
 
 if(__name__ == "__main__"):
 
-    catalog_file_name = "./processed_data/4LAC_catelogy.npz"
-    icecube_file_name = "./processed_data/output_icecube_data.npz"
-    background_file_name = "./processed_data/output_icecube_background_count.npz"
+    catalog_file_name = "./processed_data/4LAC_catelogy.pkl"
+    icecube_file_name = "./processed_data/output_icecube_data.pkl"
+    background_file_name = "./processed_data/output_icecube_background_count.pkl"
 
     output_file_preamble = "invar_blazar"
     

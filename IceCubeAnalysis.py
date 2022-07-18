@@ -314,8 +314,41 @@ class SourceClassSearch:
             equal weight, 'flux' to weight against the gamma-ray flux, and
             'dist' to weight against the luminosity distance.
         """
-        self.load_catalog(catalog_file_name, source_class_names)
-        self.N = len(self.cat_ra)
+        self.df_cat = pd.read_pickle(catalog_file_name)
+        # Modify the non-blazar AGN catalog to match the paper
+
+        df_ = pd.DataFrame({"Source_Name":"Custom 3C 411",
+                            "Flux1000":3.5e-12 / 0.011636,
+                            "RAJ2000":305.5333,
+                            "DEJ2000":10.0197,
+                            "Variability_Index":0.0,
+                            "CLASS":"rdg",
+                            "Redshift":0.457}, index=[0])                                
+        self.df_cat = pd.concat([self.df_cat, df_])
+        
+        df_ = pd.DataFrame({"Source_Name":"Custom Cen B",
+                            "Flux1000":2.5471e-09,
+                            "RAJ2000":206.59,
+                            "DEJ2000":-60.4461,
+                            "Variability_Index":6.528250,
+                            "CLASS":"rdg",
+                            "Redshift":0.0129}, index=[0])        
+        self.df_cat = pd.concat([self.df_cat, df_])
+        
+        # Merge the two Cens
+        self.df_cat.loc[self.df_cat["Source_Name"] == "4FGL J1325.5-4300", "Flux1000"] += self.df_cat.loc[self.df_cat["Source_Name"] == "4FGL J1324.0-4330e", "Flux1000"]
+        self.df_cat.drop(self.df_cat[self.df_cat["Source_Name"] == "4FGL J1324.0-4330e"].index, inplace=True)
+        
+        allowed_names_mask = np.zeros(len(self.df_cat))
+        for i in range(len(source_class_names)):
+            allowed_names_mask[self.df_cat["CLASS"] == source_class_names[i]] = 1
+
+        self.df_cat = self.df_cat[allowed_names_mask.astype(bool)]
+        self.df_cat = self.df_cat[np.abs(self.df_cat["DEJ2000"]) < 87.0]
+        
+        # Calculate the luminosity distance to source
+        self.df_cat["DL"] = np.array([self.luminosity_distance_from_redshift(z) if np.logical_not(np.isinf(z)) else -10.0 for z in self.df_cat["Redshift"]])
+        
         self.load_weights(weights_type)
 
     def load_Aeff(self, aeff_file_name):
@@ -336,81 +369,6 @@ class SourceClassSearch:
                                                                  bounds_error=False,
                                                                  fill_value="extrapolate")
 
-    def load_catalog(self, catalog_file_name, source_class_names):
-        """
-        Loads the catalog file and selects the class of interest.
-
-        Parameters
-        ----------
-        catalog_file_name : str
-            File location of pickled 4LAC catalog.
-        source_class_names : array_like
-            Names of source classes used in calculation.
-        """
-        catelog_data = np.load(catalog_file_name,
-                               allow_pickle=True)
-        cat_ra = catelog_data["cat_ra"]
-        cat_dec = catelog_data["cat_dec"]
-        cat_names = catelog_data["cat_names"]
-        cat_type = catelog_data["cat_type"]
-        cat_flux1000 = catelog_data["cat_flux1000"]
-        cat_z = catelog_data["cat_z"]
-        cat_var_index = catelog_data["cat_var_index"]
-
-        # Modify the non-blazar AGN catalog to match the paper
-        cat_names = np.append(cat_names, ["Custom 3C 411"])
-        cat_flux1000 = np.append(cat_flux1000, [3.5e-12 / 0.011636])
-        cat_type = np.append(cat_type, ['rdg'])
-        cat_ra = np.append(cat_ra, [305.5333])
-        cat_dec = np.append(cat_dec, [10.0197])
-        cat_var_index = np.append(cat_var_index, [0.0])
-        cat_z = np.append(cat_z, [0.457])
-
-        cat_names = np.append(cat_names, ["Custom Cen B"])
-        cat_flux1000 = np.append(cat_flux1000, [2.5471e-09])
-        cat_type = np.append(cat_type, ['rdg'])
-        cat_ra = np.append(cat_ra, [206.59])
-        cat_dec = np.append(cat_dec, [-60.4461])
-        cat_var_index = np.append(cat_var_index, [6.528250])
-        cat_z = np.append(cat_z, [0.0129])
-
-        # Merge the two Cens
-        cat_flux1000[cat_names=="4FGL J1325.5-4300 "] += cat_flux1000[cat_names=="4FGL J1324.0-4330e"]
-
-        cat_flux1000 = np.delete(cat_flux1000, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_type = np.delete(cat_type, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_ra = np.delete(cat_ra, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_dec = np.delete(cat_dec, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_var_index = np.delete(cat_var_index, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_z = np.delete(cat_z, np.where(cat_names=="4FGL J1324.0-4330e"))
-        cat_names = np.delete(cat_names, np.where(cat_names=="4FGL J1324.0-4330e"))
-        
-        allowed_names_mask = np.zeros(len(cat_dec))
-        for i in range(len(source_class_names)):
-            allowed_names_mask[cat_type == source_class_names[i]] = 1
-
-        allowed = np.logical_and(np.abs(cat_dec) < 87.0,
-                                 allowed_names_mask)
-
-        cat_ra = cat_ra[allowed]
-        cat_dec = cat_dec[allowed]
-        cat_names = cat_names[allowed]
-        cat_flux1000 = cat_flux1000[allowed]
-        cat_z = cat_z[allowed]
-        cat_var_index = cat_var_index[allowed]
-
-        self.cat_ra = cat_ra
-        self.cat_dec = cat_dec
-        self.cat_names = cat_names
-        self.cat_flux1000 = cat_flux1000
-        self.cat_var_index = cat_var_index
-        self.cat_z = cat_z  # Missing entries are -inf
-
-        # Calculate the luminosity distance to source
-        self.cat_DL = -10 * np.ones(len(cat_ra))  # Missing entries are -10
-        non_zero_entries = np.logical_not(np.isinf(self.cat_z))
-        self.cat_DL[non_zero_entries] = np.array([self.luminosity_distance_from_redshift(z) for z in self.cat_z[non_zero_entries]])
-
     def var_index_cut(self, var_index_cut):
         """
         Performs a cut on the source class based on its variability index.
@@ -422,16 +380,8 @@ class SourceClassSearch:
             than var_index_cut. If None, no cut is performed.
         """
 
-        allowed_values = self.cat_var_index < var_index_cut
-        self.cat_var_index = self.cat_var_index[allowed_values]
-        self.cat_ra = self.cat_ra[allowed_values]
-        self.cat_dec = self.cat_dec[allowed_values]
-        self.cat_names = self.cat_names[allowed_values]
-        self.cat_flux1000 = self.cat_flux1000[allowed_values]
-        self.cat_z = self.cat_z[allowed_values]
-        self.cat_flux_weights = self.cat_flux_weights[allowed_values]
-        self.N = len(self.cat_ra)
-
+        self.df_cat = self.df_cat[self.df_cat["Variability_Index"] < var_index_cut]
+        
     def luminosity_distance_from_redshift(self, z):
         """
         Calculates the luminosity distance from the red shfit.
@@ -470,16 +420,16 @@ class SourceClassSearch:
             'dist' to weight against the luminosity distance.
         """
         if(weights_type == 'flat'):
-            cat_flux_weights = np.ones(self.N)
+            cat_flux_weights = np.ones(len(self.df_cat))
         elif(weights_type == 'flux'):
-            cat_flux_weights = self.cat_flux1000
+            cat_flux_weights = self.df_cat["Flux1000"]
         elif(weights_type == 'dist'):
-            cat_flux_weights = 1.0 / np.power(self.cat_DL, 2.0)
-            cat_flux_weights[self.cat_DL == -10.] = 0.0  # Missing entries have a weight of zero, so aren't calculated
+            cat_flux_weights = 1.0 / np.power(self.df_cat["DL"], 2.0)
+            cat_flux_weights[self.df_cat["DL"] == -10.] = 0.0  # Missing entries have a weight of zero, so aren't calculated
         else:
             print("Weights not known: %s" % weights)
             exit()
-        self.cat_flux_weights = cat_flux_weights
+        self.df_cat["flux_weights"] = cat_flux_weights
 
     def calculate_span(self, n_entries=40):
         """
@@ -500,7 +450,7 @@ class SourceClassSearch:
 
         sum_of_interest = np.sum(np.power(self.E1 / self.E2, self.alpha)
                                  * np.power(self.E2, 2.0)
-                                 * self.cat_flux_weights
+                                 * self.df_cat["flux_weights"]
                                  / (4.0 * np.pi))
 
         para_min = 1e-13 / sum_of_interest
@@ -545,22 +495,22 @@ class SourceClassSearch:
         sweep_fluxes = np.zeros(len(parameterized_span))
         ts_results = np.zeros(len(parameterized_span))
 
-        S_i = self.sourcesearch.Si_likelihood([self.cat_ra[i_source], self.cat_dec[i_source]],
+        S_i = self.sourcesearch.Si_likelihood([self.df_cat.iloc[i_source]["RAJ2000"], self.df_cat.iloc[i_source]["DEJ2000"]],
                                               close_point_cut=close_point_cut)
-        B_i = self.sourcesearch.f_B_i(self.cat_dec[i_source])
+        B_i = self.sourcesearch.f_B_i(self.df_cat.iloc[i_source]["DEJ2000"])
 
         non_zero_S_i = (S_i > significance_cut)
         S_i = S_i[non_zero_S_i]
-        N_zeros = self.sourcesearch.N - len(S_i)
+        N_zeros = len(self.sourcesearch.df) - len(S_i)
 
         for i_given_para, given_para in enumerate(parameterized_span):
-            given_ns = given_para * self.cat_flux_weights[i_source] * self.T * np.power(self.E1, self.alpha) * self.f_Aeff_dec_integration(self.cat_dec[i_source])
+            given_ns = given_para * self.df_cat.iloc[i_source]["flux_weights"] * self.T * np.power(self.E1, self.alpha) * self.f_Aeff_dec_integration(self.df_cat.iloc[i_source]["DEJ2000"])
 
-            ts_results[i_given_para] = self.sourcesearch.test_statistic_at_point([self.cat_ra[i_source], self.cat_dec[i_source]],
+            ts_results[i_given_para] = self.sourcesearch.test_statistic_at_point([self.df_cat.iloc[i_source]["RAJ2000"], self.df_cat.iloc[i_source]["DEJ2000"]],
                                                                                  given_ns,
                                                                                  S_i, B_i, N_zeros)
 
-            current_flux = given_para * self.cat_flux_weights[i_source] * np.power(self.E1 / self.E2, self.alpha)
+            current_flux = given_para * self.df_cat.iloc[i_source]["flux_weights"] * np.power(self.E1 / self.E2, self.alpha)
             sweep_fluxes[i_given_para] = np.power(self.E2, 2.0) * current_flux / (4.0 * np.pi)
 
         return sweep_fluxes, ts_results

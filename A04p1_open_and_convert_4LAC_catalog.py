@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from astropy.table import Table
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
@@ -19,28 +21,13 @@ def open_and_convert_catalog(fits_file_name, output_file_name, verbose=False):
 
     hdul = fits.open(fits_file_name)
 
-    if(verbose):
-        print(hdul.info())
-        print(hdul[1].columns.info())
-
-    # Its possible this isn't right, but I think it is
-    cat_names = hdul[1].data.field(0).tolist()
-    cat_ra = hdul[1].data.field(1).tolist()
-    cat_dec = hdul[1].data.field(2).tolist()
-    cat_flux1000 = hdul[1].data.field(6).tolist()
-    cat_z = hdul[1].data.field(30).tolist()
-    cat_type = hdul[1].data.field(19).tolist()
-    cat_var_index = hdul[1].data.field(34).tolist()
-
-    np.savez(output_file_name,
-             cat_names=cat_names,
-             cat_ra=cat_ra,
-             cat_dec=cat_dec,
-             cat_type=cat_type,
-             cat_flux1000=cat_flux1000,
-             cat_z=cat_z,
-             cat_var_index=cat_var_index)
-
+    dat = Table.read(fits_file_name, format='fits')
+    df = dat.to_pandas()
+    # Convert the class column
+    df['CLASS'] = df['CLASS'].str.decode('utf-8')
+    df['Source_Name'] = df['Source_Name'].str.decode('utf-8') 
+    df.to_pickle(output_file_name)
+    
 
 def plot_catalog(catalog_file_name):
     """
@@ -53,12 +40,13 @@ def plot_catalog(catalog_file_name):
         File location of pickle 4LAC catalog file.
     """
 
-    catalog_data = np.load(catalog_file_name)
-    cat_var_index = catalog_data['cat_var_index']
-    cat_flux1000 = catalog_data['cat_flux1000']
-    cat_ra = catalog_data['cat_ra']
-    cat_dec = catalog_data['cat_dec']
+    df = pd.read_pickle(catalog_file_name)
 
+    cat_var_index = df['Variability_Index']
+    cat_flux1000 = df['Flux1000']
+    cat_ra = df['RAJ2000']
+    cat_dec = df['DEJ2000']
+    
     plt.figure()
     plt.hist(cat_var_index,
              log=True,
@@ -102,8 +90,9 @@ def plot_catalog(catalog_file_name):
 if(__name__ == "__main__"):
 
     fits_file_name = "./data/table_4LAC.fits"
-    output_file_name = "./processed_data/4LAC_catelogy.npz"
+    output_file_name = "./processed_data/4LAC_catelogy.pkl"
     open_and_convert_catalog(fits_file_name,
-                             output_file_name)
+                             output_file_name,
+                             verbose=True)
 
     plot_catalog(output_file_name)
